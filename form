@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Formulir Pemesanan Materai</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <!-- jsPDF + AutoTable -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+
+  <style>
+    :root{
+      --primary  : #0b57d0;
+      --success  : #2e7d32;
+      --error    : #c62828;
+      --radius   : 8px;
+      --transition:.25s ease;
+    }
+    *{box-sizing:border-box;margin:0;padding:0;font-family:'Segoe UI',Arial,Helvetica,sans-serif}
+    body{
+      min-height:100vh;
+      display:flex;
+      align-items:start;
+      justify-content:center;
+      background:transparent;
+      padding:0px 0px;
+    }
+    .card{
+      width:100%;
+      max-width:420px;
+      background:#fff;
+      border-radius:var(--radius);
+      box-shadow:0 5px 5px rgba(0,0,0,.25);
+      padding:5px 5px;
+    }
+    h2{margin-bottom:24px;text-align:center;color:var(--primary)}
+    .field{position:relative;margin-bottom:20px}
+    .field input,.field select{
+      width:100%;
+      padding:12px 12px 6px 12px;
+      border:1px solid #bbb;
+      border-radius:var(--radius);
+      font-size:15px;
+      transition:border-color var(--transition);
+      background:transparent;
+    }
+    .field input:focus,.field select:focus{
+      border-color:var(--primary);outline:none
+    }
+    .field label{
+      position:absolute;left:12px;top:50%;
+      transform:translateY(-50%);
+      color:#666;font-size:15px;pointer-events:none;
+      transition:all var(--transition);
+    }
+    .field input:focus + label,
+    .field input:not(:placeholder-shown) + label,
+    .field select:valid + label{
+      top:6px;font-size:12px;color:var(--primary)
+    }
+    .field input[readonly]{background:#f5f5f5;color:#555}
+
+    button{
+      width:100%;padding:12px;border:none;border-radius:var(--radius);
+      background:var(--primary);color:#fff;font-size:16px;cursor:pointer;
+      transition:background var(--transition), transform var(--transition);
+    }
+    button:hover:not(:disabled){background:#094ab7;transform:translateY(-1px)}
+    button:disabled{background:#90a4ae;cursor:not-allowed}
+
+    #progressWrapper{
+      display:none;margin-top:18px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden
+    }
+    #progressBar{height:100%;width:0%;background:var(--primary);transition:width .3s}
+    #response{margin-top:16px;text-align:center;font-weight:600}
+    .success{color:var(--success)}
+    .error{color:var(--error)}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Form. Pemesanan Materai</h2>
+    <form id="donasiForm">
+      <div class="field">
+        <select name="wilayah" required>
+          <option value="" hidden></option>
+          <option>Semarang</option><option>Ungaran</option><option>Salatiga</option>
+          <option>Kendal</option><option>Temanggung</option><option>Purwodadi</option>
+          <option>Blora</option><option>Pati</option><option>Kudus</option>
+          <option>Jepara</option><option>Pekalongan</option><option>Tegal</option>
+          <option>Brebes</option><option>Pemalang</option><option>Wonosobo</option>
+          <option>Purwokerto</option><option>Cilacap</option><option>Purbalingga</option>
+          <option>Banjarnegara</option><option>Kebumen</option><option>Solo</option>
+          <option>Sragen</option><option>Boyolali</option><option>Klaten</option>
+          <option>Sukoharjo</option><option>Wonogiri</option><option>Karanganyar</option>
+          <option>Purworejo</option><option>Magelang</option>
+        </select>
+        <label>Wilayah Pos</label>
+      </div>
+
+      <div class="field">
+        <input type="text" name="nama_bpr" required placeholder=" ">
+        <label>Nama BPR/BPRS</label>
+      </div>
+
+      <div class="field">
+        <input type="text" name="nama_pic" required placeholder=" ">
+        <label>Nama PIC BPR/BPRS</label>
+      </div>
+
+      <div class="field">
+        <input type="text" name="no_wa" id="noWa" pattern="62[0-9]{10,}" required placeholder=" " maxlength="15">
+        <label>No WA PIC (cth: 62857xxx)</label>
+      </div>
+
+      <div class="field">
+        <input type="number" name="jumlah_keping" id="jumlahKeping" min="1" required placeholder=" ">
+        <label>Jumlah Keping Materai</label>
+      </div>
+
+      <div class="field">
+        <input type="text" name="total_bayar" id="totalBayar" readonly required placeholder=" ">
+        <label>Total Bayar (Rp)</label>
+      </div>
+
+      <div class="field">
+        <input type="text" name="link_google_map" id="linkGoogleMap" placeholder=" " pattern="https?://.*" title="Masukkan link Google Maps yang valid">
+        <label>Link Google Maps Lokasi</label>
+      </div>
+
+      <button type="submit" id="btnSubmit">Kirim Pesanan</button>
+    </form>
+
+    <div id="progressWrapper"><div id="progressBar"></div></div>
+    <p id="response"></p>
+  </div>
+
+  <script>
+    const scriptURL = 'https://script.google.com/macros/s/AKfycbykzsYMajtRLVbQDi-sgiwI8s7UXMLAuH7SqHJX-3nvcLbQX37B0zWt1Yytc4VML4se/exec';
+    const form        = document.getElementById('donasiForm');
+    const responseP   = document.getElementById('response');
+    const jumlahKeping= document.getElementById('jumlahKeping');
+    const totalBayar  = document.getElementById('totalBayar');
+    const progressWrap= document.getElementById('progressWrapper');
+    const progressBar = document.getElementById('progressBar');
+    const btnSubmit   = document.getElementById('btnSubmit');
+    const noWa        = document.getElementById('noWa');
+
+    noWa.addEventListener('input', e=>{
+      let val = e.target.value.replace(/\D/g,'');
+      if(!val.startsWith('62')) val = '62'+val;
+      e.target.value = val;
+    });
+
+    /* ---------- helper: format ribuan ---------- */
+    function formatRibuan(angka) {
+      return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+    }
+
+    function hitungTotal(){
+      const jml = parseInt(jumlahKeping.value)||0;
+      const total = jml * 10000;
+      totalBayar.value = formatRibuan(total);   // tampilkan dengan titik
+    }
+    jumlahKeping.addEventListener('input',hitungTotal);
+
+    /* ---------- gambar logo -> dataURL ---------- */
+    function loadImgAsDataURL(url){
+      return fetch(url)
+        .then(r=>r.blob())
+        .then(blob=>new Promise((res,rej)=>{
+          const reader = new FileReader();
+          reader.onloadend = ()=> res(reader.result);
+          reader.onerror   = rej;
+          reader.readAsDataURL(blob);
+        }));
+    }
+
+/* ---------- PDF : logo + tabel pesanan + tabel daftar kantor pos ---------- */
+async function createPDF(data){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+
+  const logoURL  = 'https://64.media.tumblr.com/f28ea5f6d7f13ac5f10c9eb2401461e3/4e81c2f46b618a59-cf/s1280x1920/a2968966ccc9fa20fde4fe458cbf3b08272ac1d4.jpg';
+  const logoData = await loadImgAsDataURL(logoURL);
+
+  const pageW = doc.internal.pageSize.getWidth();
+  const colW  = pageW / 3; // lebar kolom kiri (logo)
+
+  /* 1) Judul */
+  doc.setFontSize(16);
+  doc.text("BUKTI PEMESANAN MATERAI", pageW/2, 10, {align:'center'});
+
+  /* 2) Logo persegi kiri */
+  doc.addImage(logoData, 'JPEG', 10, 12, 53, 53);
+
+  /* 3) Tabel data pesanan (kanan) */
+  const head1 = [['Keterangan', 'Isian']];
+  const rows1 = [
+    ['Wilayah Pos',     data.get('wilayah')],
+    ['Nama BPR/BPRS',   data.get('nama_bpr')],
+    ['Nama PIC',        data.get('nama_pic')],
+    ['No WA PIC',       data.get('no_wa')],
+    ['Jumlah Keping',   data.get('jumlah_keping')],
+    ['Total Bayar',     'Rp '+formatRibuan(data.get('total_bayar'))],
+    ['Link Google Maps', data.get('link_google_map') || '-']
+  ];
+  doc.autoTable({
+    head       : head1,
+    body       : rows1,
+    startY     : 12,
+    margin     : {left: colW + 5, right: 10},
+    theme      : 'grid',
+    headStyles : { fillColor: [11, 87, 208], textColor: 255 }
+  });
+
+  /* 4) Tabel Daftar Kantor Pos (mulai setelah tabel sebelumnya) */
+  const head2 = [
+    ['Kantor Pos','Alamat','Nama PIC','No HP','No Rekening']
+  ];
+  const rows2 = [
+    ['Semarang','Jl. Pemuda No. 4','Nur Hidayah I','089501829800','BRI, 008301000217308, POS INDONESIA (PERSERO), PT.'],
+    ['Ungaran','Jl. MT Haryono No. 10','Dwi Iriyanti S','081391198845','BRI, 032701000200303, Kantor Pos & Giro Ungaran'],
+    ['Salatiga','Jl. Prof. Moh.Yamin No. 3','Nur Fuaida Mahya','08562706061','BRI, 0081-01-000842-30-9 , POS INDONESIA PT'],
+    ['Kendal','Jl. Ry Soekarno Hatta 224','Rusmanto','08996700322','BRI, 1394906050000, P0651300 KENDAL'],
+    ['Temanggung','Jl. S Parman 5','Anistia Fenta F','082243321051','BRI, 1394906200000, PT POS INDONESIA QQ DIRKUGPOS'],
+    ['Purwodadi','Jl. Jend. Sudirman No. 4','Jayak Maisyur','085647779416','BRI, 007601002354309, PT POS INDONESIA'],
+    ['Blora','Jl. Pemuda No. 5','Panji Sigit P','085290625274','BRI, 001001000126300, PT Pos Indonesia Blora'],
+    ['Pati','Jl. P.Sudirman No. 61','Eka Heri S','085290828032','BRI, 006601002086301, POS INDONESIA PT'],
+    ['Kudus','Jl. Jend. Sudirman No. 43','Arga Arifriatna','082280181388','BRI, 0038-01-000024-30-2 , KANTOR POS DAN GIRO'],
+    ['Jepara','Jl. Yos Soedarso No. 24','Muhammad M','085290779711','BRI, 0022-01-000112-30-2, KANTOR POS DAN GIRO'],
+    ['Pekalongan','Jl. Cendrawasih No. 1','Riska Indah','0818821842','BRI, 0068-01-001554-30-9 , POS INDONESIA PT'],
+    ['Tegal','Jl. Proklamasi No. 2','Muh Akbar R','082314942578','BRI, 0101-01-001508-30-0 , POS INDONESIA PT'],
+    ['Brebes','Jl. P. Diponegoro No. 66','Arifiyan Khamdani','085228595496','BRI, 1394906070000, POS INDONESIA QQ KANTOR POS BREBES'],
+    ['Pemalang','Jl. A Yani No. 1','Analis Fajar P.','082322423860','BRI, 1394906080000, P065230000 PEMALANG PT POS INDONESIA QQ DIRKUGPOS'],
+    ['Wonosobo','Jl. Pemuda No. 9','Melati Senja','081327264050','BRI, 011201001122305, PT POS INDONESIA ( PERSERO ) WONOSOBO'],
+    ['Purwokerto','Jl. Jend. Sudirman No. 435','Windha Saktiana','081215658719','BRI, 007701000098309, KANTOR POS DAN GIRO BESAR PURWOKERTO'],
+    ['Cilacap','Jl. A Yani No. 32','Yulia Rani P','08121571928','BRI, 010601000085309, PERUM POS DAN GIRO CILACAP'],
+    ['Purbalingga','Jl. Alun Alun Utara No. 2','Ari Tyas R','085647676831','BRI, 007401001100301, POS INDONESIA PT'],
+    ['Banjarnegara','Jl. Pemuda No. 72','Arian Muji U','082328839997','BRI, 000401001269308, Pos Indonesia qq Banjarnegara'],
+    ['Kebumen','Jl. Pahlawan No. 169','Eka Setyojati','081329529680','BRI, 003201001509301, KANTOR POS KEBUMEN'],
+    ['Solo','Jl. Jend. Sudirman No. 8','Shinta Sri W','085220366767','BRI, 009701001451302, POS INDONESIA PT'],
+    ['Sragen','Jl. Raya Sukowati No. 193','Ari Praptomo','082111676561','BRI, 014001001425306, POS INDONESIA QQ SRAGEN'],
+    ['Boyolali','Jl. Pandanaran No. 64','Andalusia','085895334557','BRI, 017301000303308, PT POS INDONESIA ( PERSERO ) BOYOLALI'],
+    ['Klaten','Jl. Pemuda No. 199','Hamdani Suseno','085271146225','BRI, 0035-01-000-769-30-1, POS INDONESIA KKP KLATEN'],
+    ['Sukoharjo','Jl. Wandyopranoto No. 12','Hilman Cahya M','081770569653','BRI, 0511-01-000869-30-0, POS INDONESIA PT'],
+    ['Wonogiri','Jl. Ahmad Yani No. 168','Dwi S','081215636543','BRI, 0158-01-001024-30-9, KANTOR POS WONOGIRI'],
+    ['Karanganyar','Jl. Lawu No. 8','Nita Ayu R','081337327504','BRI, 0149-01-001239-30-3, PT POS INDONESIA QQ KARANGANYAR'],
+    ['Purworejo','Jl. Jend. A Yani No. 2','I Gusti Ayu Ketut','081949761735','BRI, 0078-01-001135-30-2, POS INDONESIA PT'],
+    ['Magelang','Jl. A.Yani No. 2','Amilda Roslita','082119194616','BRI, 0048-01-000191-30-6, POS INDONESIA PT']
+  ];
+
+  doc.autoTable({
+    head       : head2,
+    body       : rows2,
+    startY     : (doc.lastAutoTable ? doc.lastAutoTable.finalY + 0 : 50),
+    theme      : 'grid',
+    headStyles : { fillColor: [11, 87, 208], textColor: 255 },
+    styles     : { fontSize: 7 },
+    margin     : { left: 10, right: 10 }
+  });
+
+  doc.save('Bukti_Pemesanan_Materai.pdf');
+}
+    /* ---------- progress bar ---------- */
+    function animateProgress(ms=1500){
+      return new Promise(res=>{
+        let w=0;
+        const t=setInterval(()=>{
+          w+=100/(ms/30);
+          if(w>=100){w=100; clearInterval(t); res();}
+          progressBar.style.width = w+'%';
+        },30);
+      });
+    }
+
+    /* ---------- submit handler ---------- */
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      btnSubmit.disabled = true;
+      responseP.textContent = '';
+      progressWrap.style.display = 'block';
+      progressBar.style.width = '0%';
+
+      await animateProgress();
+
+      fetch(scriptURL, {method:'POST', body:new FormData(form)})
+        .then(()=>{
+          responseP.innerHTML = '<span class="success">✅ Data berhasil dikirim!</span>';
+          return createPDF(new FormData(form));
+        })
+        .then(()=>{
+          form.reset();
+          hitungTotal();
+          progressWrap.style.display = 'none';
+          btnSubmit.disabled = false;
+        })
+        .catch(()=>{
+          responseP.innerHTML = '<span class="error">❌ Gagal mengirim data.</span>';
+          progressWrap.style.display = 'none';
+          btnSubmit.disabled = false;
+        });
+    });
+  </script>
+</body>
+</html>
