@@ -18,27 +18,27 @@
     body{
       min-height:100vh;
       display:flex;
-      align-items:start;
+      align-items:flex-start;
       justify-content:center;
-      background:transparent;
-      padding:0;
+      background:#f2f5fa;
+      padding:24px 8px;
     }
     .card{
       width:100%;
       max-width:420px;
       background:#fff;
       border-radius:var(--radius);
-      box-shadow:0 5px 5px rgba(0,0,0,.25);
-      padding:5px 5px;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);
+      padding:16px;
     }
-    h2{margin-bottom:24px;text-align:center;color:var(--primary)}
-    .field{position:relative;margin-bottom:20px}
+    h2{margin-bottom:20px;text-align:center;color:var(--primary);font-size:18px}
+    .field{position:relative;margin-bottom:2px}          /* ← jarak antar kotak 2px */
     .field input,.field select{
       width:100%;
-      padding:12px 12px 6px 12px;
+      padding:10px 10px 5px 10px;          /* padding sedikit dipangkas */
       border:1px solid #bbb;
       border-radius:var(--radius);
-      font-size:15px;
+      font-size:14px;                      /* ukuran huruf diperkecil */
       transition:border-color var(--transition);
       background:transparent;
     }
@@ -46,31 +46,33 @@
       border-color:var(--primary);outline:none
     }
     .field label{
-      position:absolute;left:12px;top:50%;
+      position:absolute;
+      left:10px;top:50%;
       transform:translateY(-50%);
-      color:#666;font-size:15px;pointer-events:none;
+      color:#666;font-size:14px;pointer-events:none;   /* font label 14px */
       transition:all var(--transition);
     }
     .field input:focus + label,
     .field input:not(:placeholder-shown) + label,
     .field select:valid + label{
-      top:6px;font-size:12px;color:var(--primary)
+      top:4px;font-size:11px;color:var(--primary)
     }
     .field input[readonly]{background:#f5f5f5;color:#555}
 
     button{
-      width:100%;padding:12px;border:none;border-radius:var(--radius);
-      background:var(--primary);color:#fff;font-size:16px;cursor:pointer;
+      width:100%;padding:10px;border:none;border-radius:var(--radius);
+      background:var(--primary);color:#fff;font-size:15px;cursor:pointer;
       transition:background var(--transition), transform var(--transition);
+      margin-top:10px;
     }
     button:hover:not(:disabled){background:#094ab7;transform:translateY(-1px)}
     button:disabled{background:#90a4ae;cursor:not-allowed}
 
     #progressWrapper{
-      display:none;margin-top:18px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden
+      display:none;margin-top:14px;height:6px;background:#e0e0e0;border-radius:3px;overflow:hidden
     }
     #progressBar{height:100%;width:0%;background:var(--primary);transition:width .3s}
-    #response{margin-top:16px;text-align:center;font-weight:600}
+    #response{margin-top:12px;text-align:center;font-weight:600;font-size:13px}
     .success{color:var(--success)}
     .error{color:var(--error)}
   </style>
@@ -160,6 +162,7 @@
   </div>
 
   <script>
+    /* ---------- script JS sama seperti yang Anda miliki ---------- */
     const scriptURL = 'https://script.google.com/macros/s/AKfycbykzsYMajtRLVbQDi-sgiwI8s7UXMLAuH7SqHJX-3nvcLbQX37B0zWt1Yytc4VML4se/exec';
     const form        = document.getElementById('donasiForm');
     const responseP   = document.getElementById('response');
